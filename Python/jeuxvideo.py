@@ -3,9 +3,9 @@ from sys import exit
 
 pygame.init()
 pygame.display.set_caption("Sokoban Mystery Game")
+
 screen = pygame.display.set_mode((800, 600))
 clock = pygame.time.Clock()
-font = pygame.font.Font(None, 40)
 win_font = pygame.font.Font(None, 80)
 
 background = pygame.image.load('Python/img/background.png').convert()
@@ -84,17 +84,29 @@ while True:
             if dx > 0: box.left = player_rect.right
             if dx < 0: box.right = player_rect.left
             
-            if box.left < 0: box.left = 0; player_rect.left = box.right
-            if box.right > 800: box.right = 800; player_rect.right = box.left
+            if box.left < 0: 
+                box.left = 0 
+                player_rect.left = box.right
+            if box.right > 800: 
+                box.right = 800
+                player_rect.right = box.left
                 
             if box.colliderect(wall_rect):
-                if dx > 0: box.right = wall_rect.left; player_rect.right = box.left
-                if dx < 0: box.left = wall_rect.right; player_rect.left = box.right
+                if dx > 0: 
+                    box.right = wall_rect.left 
+                    player_rect.right = box.left
+                if dx < 0: 
+                    box.left = wall_rect.right 
+                    player_rect.left = box.right
                 
             for other in box_rects:
                 if box != other and box.colliderect(other):
-                    if dx > 0: box.right = other.left; player_rect.right = box.left
-                    if dx < 0: box.left = other.right; player_rect.left = box.right
+                    if dx > 0: 
+                        box.right = other.left
+                        player_rect.right = box.left
+                    if dx < 0: 
+                        box.left = other.right
+                        player_rect.left = box.right
 
     player_rect.y += dy
     
@@ -110,17 +122,29 @@ while True:
             if dy > 0: box.top = player_rect.bottom
             if dy < 0: box.bottom = player_rect.top
             
-            if box.top < 0: box.top = 0; player_rect.top = box.bottom
-            if box.bottom > 600: box.bottom = 600; player_rect.bottom = box.top
+            if box.top < 0: 
+                box.top = 0
+                player_rect.top = box.bottom
+            if box.bottom > 600: 
+                box.bottom = 600
+                player_rect.bottom = box.top
 
             if box.colliderect(wall_rect):
-                if dy > 0: box.bottom = wall_rect.top; player_rect.bottom = box.top
-                if dy < 0: box.top = wall_rect.bottom; player_rect.top = box.bottom
+                if dy > 0: 
+                    box.bottom = wall_rect.top
+                    player_rect.bottom = box.top
+                if dy < 0: 
+                    box.top = wall_rect.bottom
+                    player_rect.top = box.bottom
 
             for other in box_rects:
                 if box != other and box.colliderect(other):
-                    if dy > 0: box.bottom = other.top; player_rect.bottom = box.top
-                    if dy < 0: box.top = other.bottom; player_rect.top = box.bottom
+                    if dy > 0: 
+                        box.bottom = other.top
+                        player_rect.bottom = box.top
+                    if dy < 0: 
+                        box.top = other.bottom
+                        player_rect.top = box.bottom
 
     for box in box_rects[:]:
         for hole in holes:
@@ -145,7 +169,6 @@ while True:
 
     pygame.draw.rect(screen, (0, 0, 0), player_rect, 2)
 
-    text = font.render(f"Holes Filled: {len(filled_holes)}/{len(holes)}", True, (255, 255, 255))    
 	
 
     for hole in holes:
