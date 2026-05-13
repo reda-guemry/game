@@ -1,62 +1,72 @@
-from pynput import keyboard 
-import os
+import pygame 
+from sys import exit
 
-pos = [0, 0]
-boxes = [[2, 3], [5, 5], [7, 2], [8, 8], [1, 7]]
-existences = [[6, 0], [6, 1], [6, 2], [6, 3]]
+pygame.init()
+pygame.display.set_caption("Player Game") 
 
-def draw_map():
-    os.system('cls' if os.name == 'nt' else 'clear')
-    for y in range(10):
-        row = []
-        for x in range(10):
-            p = [y, x]
-            if p == pos: row.append('P')
-            elif p in boxes: row.append('B')
-            elif p in existences: row.append('-')
-            else: row.append(' ')
-        print(" ".join(row))
+screen = pygame.display.set_mode((800 , 600))
+Clock = pygame.time.Clock()
 
-def move(dy, dx):
-    new_p = [pos[0] + dy, pos[1] + dx]
+test_surface = pygame.image.load('Python/img/background.png').convert()
+test_surface = pygame.transform.scale(test_surface, (800, 600))
 
-    if not (0 <= new_p[0] <= 9 and 0 <= new_p[1] <= 9) or new_p in existences:
-        return
+player_surface = pygame.image.load('Python/img/player.png').convert_alpha()
+player_rect = player_surface.get_rect(center = (400, 300)) 
 
-    if new_p in boxes:
-        new_box = [new_p[0] + dy, new_p[1] + dx]
+box_surface = pygame.image.load('Python/img/box.png').convert_alpha()
+box_surface = pygame.transform.scale(box_surface, (60, 40))
+
+box_rect = [
+    box_surface.get_rect(center = (600, 400)), 
+    box_surface.get_rect(center = (200, 400)),
+    box_surface.get_rect(center = (400, 200)), 
+    box_surface.get_rect(center = (300, 500)),
+    box_surface.get_rect(center = (500, 500)), 
+]
+
+font = pygame.font.Font(None , 40)
+debug_font = pygame.font.Font(None , 25)
+text_surface = font.render("Hello World", True, (255, 255, 255))
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT: 
+            pygame.quit()
+            exit()
         
-        if (0 <= new_box[0] <= 9 and 0 <= new_box[1] <= 9) and \
-           new_box not in existences and new_box not in boxes:
-            boxes.remove(new_p)
-            boxes.append(new_box)
-        else:
-            return 
+        if event.type == pygame.KEYDOWN: 
+            if event.key == pygame.K_RIGHT or event.key == pygame.K_d: 
+                player_rect.x += 10
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a: 
+                player_rect.x -= 10
+            if event.key == pygame.K_UP or event.key == pygame.K_w: 
+                player_rect.y -= 10
+            if event.key == pygame.K_DOWN or event.key == pygame.K_s: 
+                player_rect.y += 10
 
-    pos[0], pos[1] = new_p[0], new_p[1]
-
-def on_press(key):
-    moves = {
-        'w': (-1, 0), 's': (1, 0), 'a': (0, -1), 'd': (0, 1),
-        keyboard.Key.up: (-1, 0), keyboard.Key.down: (1, 0),
-        keyboard.Key.left: (0, -1), keyboard.Key.right: (0, 1)
-    }
+    screen.blit(test_surface, (0, 0))
+    screen.blit(text_surface, (300, 50))
     
-    k = key.char if hasattr(key, 'char') else key
-    if k in moves:
-        dy, dx = moves[k]
-        move(dy, dx)
-        draw_map()
+    screen.blit(player_surface, player_rect)
+    pygame.draw.rect(screen, (0, 255, 0), player_rect, 2)
 
-def on_release(key):
-    if key == keyboard.Key.esc: return False
+    for box in box_rect:
+        screen.blit(box_surface, box)
+        pygame.draw.rect(screen, (255, 0, 0), box, 2)
+        
+        size_text = debug_font.render(f"{box.width}x{box.height}", True, (255, 255, 0))
+        screen.blit(size_text, (box.x, box.y - 20))
 
-draw_map()
-with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-    listener.join()
+    collision = False
+    for box in box_rect:
+        if player_rect.colliderect(box):
+            collision = True
+            break
+            
+    if collision:
+        text_surface = font.render("Collision Detected!", True, (255, 0, 0))
+    else:
+        text_surface = font.render("Hello World", True, (255, 255, 255))
 
-
-
-
-
-
+    pygame.display.update()
+    Clock.tick(60)
