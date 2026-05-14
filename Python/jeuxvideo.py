@@ -19,7 +19,7 @@ player_sheet = pygame.image.load('Python/img/player.png').convert_alpha()
 player_frames = []
 for i in range(11):
     frame = player_sheet.subsurface(pygame.Rect(i * 32, 0, 32, 32))
-    player_frames.append(pygame.transform.scale(frame, (50, 50)))
+    player_frames.append(pygame.transform.scale(frame, (50, 40)))
 
 player_images = {
     'right': player_frames[0],
@@ -41,7 +41,9 @@ wall_rect = wall_surface.get_rect(topleft=(300, 400))
 
 hole_sheet = pygame.image.load('Python/img/hole.png').convert_alpha()  
 hole_surface = pygame.transform.scale(hole_sheet.subsurface(pygame.Rect(0, 0, 48, 48)), (60, 60))
-red_hole_surface = pygame.transform.scale(hole_sheet.subsurface(pygame.Rect(288, 0, 48, 48)), (60, 60))
+
+red_hole_sheet = pygame.image.load('Python/img/hole_rouge.png').convert_alpha()  
+red_hole_surface = pygame.transform.scale(red_hole_sheet.subsurface(pygame.Rect(0, 0, 48, 48)), (60, 60))
 
 box_positions = [(600, 400), (250, 400), (400, 100), (350, 230), (600, 300)]
 hole_positions = [(100, 100), (700, 100), (100, 500), (700, 500), (400, 300)]
@@ -61,8 +63,10 @@ def can_move_box(current_box, dx, dy, all_boxes):
     temp_rect = current_box.copy()
     temp_rect.x += dx
     temp_rect.y += dy
+    
     if temp_rect.colliderect(wall_rect): return False
     if temp_rect.left < 0 or temp_rect.right > 800 or temp_rect.top < 0 or temp_rect.bottom > 600: return False
+    
     for other in all_boxes:
         if current_box != other['rect'] and temp_rect.colliderect(other['rect']):
             return False
@@ -77,7 +81,6 @@ while True:
     keys = pygame.key.get_pressed()
     dx, dy = 0, 0
     speed = 3
-    shift_pressed = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
 
     if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
         dx, current_player_surface = speed, player_images['right']
@@ -88,78 +91,81 @@ while True:
     elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
         dy = speed
 
-    if dx != 0:
-        current_collisions = [b for b in boxes if player_rect.colliderect(b['rect'])]
-        
-        if len(current_collisions) > 1:
-            player_rect.x += dx
-            if dx > 0: player_rect.right = current_collisions[0]['rect'].left
-            elif dx < 0: player_rect.left = current_collisions[0]['rect'].right
-        elif len(current_collisions) == 1:
-            b = current_collisions[0]
-            is_pushing = (dx > 0 and player_rect.centerx < b['rect'].centerx) or (dx < 0 and player_rect.centerx > b['rect'].centerx)
-            
-            if is_pushing:
-                if can_move_box(b['rect'], dx, 0, boxes):
-                    player_rect.x += dx
-                    b['rect'].x += dx
-                else:
-                    player_rect.x += dx
-                    if dx > 0: player_rect.right = b['rect'].left
-                    elif dx < 0: player_rect.left = b['rect'].right
-            elif shift_pressed:  
-                if can_move_box(b['rect'], dx, 0, boxes):
-                    player_rect.x += dx
-                    b['rect'].x += dx
-                else:
-                    player_rect.x += dx
+    shift_pressed = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
+    prev_player_rect = player_rect.copy()
+
+    player_rect.x += dx
+
+    if player_rect.left < 0: player_rect.left = 0
+    if player_rect.right > 800: player_rect.right = 800
+
+    if player_rect.colliderect(wall_rect):
+        if dx > 0: player_rect.right = wall_rect.left
+        elif dx < 0: player_rect.left = wall_rect.right
+
+    colliding_boxes_x = [b for b in boxes if player_rect.colliderect(b['rect'])]
+    
+    if len(colliding_boxes_x) > 1:
+        if dx > 0: player_rect.right = colliding_boxes_x[0]['rect'].left 
+        elif dx < 0: player_rect.left = colliding_boxes_x[0]['rect'].right
+    else:
+        for b in colliding_boxes_x:
+            if can_move_box(b['rect'], dx, 0, boxes):
+                if dx > 0: b['rect'].left = player_rect.right
+                elif dx < 0: b['rect'].right = player_rect.left
             else:
-                player_rect.x += dx
-        else:
-            player_rect.x += dx
+                if dx > 0: player_rect.right = b['rect'].left
+                elif dx < 0: player_rect.left = b['rect'].right
 
-        if player_rect.left < 0: player_rect.left = 0
-        if player_rect.right > 800: player_rect.right = 800
-        if player_rect.colliderect(wall_rect):
-            if dx > 0: player_rect.right = wall_rect.left
-            elif dx < 0: player_rect.left = wall_rect.right
+    actual_dx = player_rect.x - prev_player_rect.x
+    if shift_pressed and actual_dx != 0 and len(colliding_boxes_x) == 0:
+        for b in boxes:
+            same_row = b['rect'].bottom > prev_player_rect.top and b['rect'].top < prev_player_rect.bottom
+            if actual_dx > 0:
+                behind = abs(b['rect'].right - prev_player_rect.left) <= abs(actual_dx)
+            else:
+                behind = abs(b['rect'].left - prev_player_rect.right) <= abs(actual_dx)
+            if same_row and behind and can_move_box(b['rect'], actual_dx, 0, boxes):
+                b['rect'].x += actual_dx
+                break
 
-    if dy != 0:
-        current_collisions = [b for b in boxes if player_rect.colliderect(b['rect'])]
-        
-        if len(current_collisions) > 1:
-            player_rect.y += dy
-            if dy > 0: player_rect.bottom = current_collisions[0]['rect'].top
-            elif dy < 0: player_rect.top = current_collisions[0]['rect'].bottom
-        elif len(current_collisions) == 1:
-            b = current_collisions[0]
-            is_pushing = (dy > 0 and player_rect.centery < b['rect'].centery) or (dy < 0 and player_rect.centery > b['rect'].centery)
-            
-            if is_pushing:
+    prev_player_rect_y = player_rect.copy()
+    player_rect.y += dy
+
+    if player_rect.top < 0: player_rect.top = 0
+    if player_rect.bottom > 600: player_rect.bottom = 600
+
+    if player_rect.colliderect(wall_rect):
+        if dy > 0: player_rect.bottom = wall_rect.top
+        elif dy < 0: player_rect.top = wall_rect.bottom
+
+    colliding_boxes_y = [b for b in boxes if player_rect.colliderect(b['rect'])]
+
+    if len(colliding_boxes_y) > 1:
+        if dy > 0: player_rect.bottom = colliding_boxes_y[0]['rect'].top 
+        elif dy < 0: player_rect.top = colliding_boxes_y[0]['rect'].bottom
+    else:
+        for b in boxes:
+            if player_rect.colliderect(b['rect']):
                 if can_move_box(b['rect'], 0, dy, boxes):
-                    player_rect.y += dy
-                    b['rect'].y += dy
+                    if dy > 0: b['rect'].top = player_rect.bottom
+                    elif dy < 0: b['rect'].bottom = player_rect.top
                 else:
-                    player_rect.y += dy
                     if dy > 0: player_rect.bottom = b['rect'].top
-                    elif dy < 0: player_rect.top = b['rect'].bottom
-            elif shift_pressed:
-                if can_move_box(b['rect'], 0, dy, boxes):
-                    player_rect.y += dy
-                    b['rect'].y += dy
-                else:
-                    player_rect.y += dy
+                    elif dy < 0: player_rect.top = b['rect'].bottom 
+
+    actual_dy = player_rect.y - prev_player_rect_y.y
+    if shift_pressed and actual_dy != 0 and len(colliding_boxes_y) == 0:
+        for b in boxes:
+            same_col = b['rect'].right > prev_player_rect_y.left and b['rect'].left < prev_player_rect_y.right
+            if actual_dy > 0:
+                behind = abs(b['rect'].bottom - prev_player_rect_y.top) <= abs(actual_dy)
             else:
-                player_rect.y += dy
-        else:
-            player_rect.y += dy
-
-        if player_rect.top < 0: player_rect.top = 0
-        if player_rect.bottom > 600: player_rect.bottom = 600
-        if player_rect.colliderect(wall_rect):
-            if dy > 0: player_rect.bottom = wall_rect.top
-            elif dy < 0: player_rect.top = wall_rect.bottom
-
+                behind = abs(b['rect'].top - prev_player_rect_y.bottom) <= abs(actual_dy)
+            if same_col and behind and can_move_box(b['rect'], 0, actual_dy, boxes):
+                b['rect'].y += actual_dy
+                break
+        
     for b in boxes[:]:
         for h in holes:
             if h['rect'] not in filled_holes:
@@ -171,11 +177,15 @@ while True:
 
     screen.blit(background, (0, 0))
     for h in holes:
-        screen.blit(red_hole_surface if h['rect'] in filled_holes else hole_surface, h['rect'])
+        if h['rect'] in filled_holes:
+            screen.blit(red_hole_surface, h['rect'])
+        else:
+            screen.blit(hole_surface, h['rect'])
         h_num = font.render(str(h['num']), True, (0, 0, 0))
         screen.blit(h_num, h_num.get_rect(center=h['rect'].center))
 
     screen.blit(wall_surface, wall_rect)
+
     for b in boxes:
         screen.blit(box_surface, b['rect'])
         b_num = font.render(str(b['num']), True, (0, 0, 0))
